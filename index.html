@@ -90,21 +90,6 @@
       display: none;
     }
 
-    .pass-screen {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 20px;
-    }
-
-    .pass-screen h2 {
-      font-size: 3rem;
-      margin-bottom: 30px;
-    }
-
     .timer {
       font-size: 3rem;
       text-align: center;
@@ -129,6 +114,12 @@
       text-align: center;
       color: #95a5a6;
     }
+
+    .player-counter {
+      margin: 15px 0;
+      font-size: 1.1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -146,7 +137,7 @@
     <div id="setup-game" class="hidden">
       <h1>Configurar Juego</h1>
       <div class="card">
-        <label for="num-players">Número de jugadores:</label>
+        <label for="num-players">Número de jugadores (3-10):</label>
         <input type="number" id="num-players" min="3" max="10" value="4">
         <button id="start-game-btn">Comenzar</button>
         <button id="back-to-menu" class="secondary">Volver</button>
@@ -156,18 +147,11 @@
     <!-- Player View -->
     <div id="player-view" class="hidden">
       <div class="card">
-        <div class="instructions">Tu palabra es:</div>
+        <div class="player-counter" id="current-player-display"></div>
         <div class="word-display" id="secret-word">PALABRA</div>
-        <div class="instructions">Da pistas sobre esta palabra sin decirla directamente</div>
-        <button id="continue-btn">He visto mi palabra</button>
+        <div class="instructions" id="player-instructions"></div>
+        <button id="continue-btn">Continuar</button>
       </div>
-    </div>
-
-    <!-- Pass Device Screen -->
-    <div id="pass-screen" class="hidden pass-screen">
-      <h2>PASE EL CELULAR</h2>
-      <p>Al siguiente jugador</p>
-      <div id="player-counter"></div>
     </div>
 
     <!-- Game View -->
@@ -194,6 +178,7 @@
     let gameState = {
       players: 4,
       currentPlayer: 0,
+      impostor: null,
       currentWord: '',
       timer: null,
       timeLeft: 30 * 60 // 30 minutos en segundos
@@ -204,7 +189,6 @@
       mainMenu: document.getElementById('main-menu'),
       setupGame: document.getElementById('setup-game'),
       playerView: document.getElementById('player-view'),
-      passScreen: document.getElementById('pass-screen'),
       gameView: document.getElementById('game-view')
     };
 
@@ -260,39 +244,48 @@
         return;
       }
       
+      // Configurar nuevo juego
       gameState = {
         players: numPlayers,
         currentPlayer: 0,
+        impostor: Math.floor(Math.random() * numPlayers), // Elegir impostor aleatorio
         currentWord: getRandomWord(),
         timer: null,
         timeLeft: 30 * 60
       };
       
       // Mostrar la palabra al primer jugador
-      document.getElementById('secret-word').textContent = gameState.currentWord;
-      document.getElementById('game-word').textContent = gameState.currentWord;
-      document.getElementById('player-counter').textContent = `Jugador 1 de ${gameState.players}`;
-      showView(views.playerView);
+      showPlayerView();
     });
+
+    function showPlayerView() {
+      const isImpostor = gameState.currentPlayer === gameState.impostor;
+      
+      document.getElementById('current-player-display').textContent = 
+        `Jugador ${gameState.currentPlayer + 1} de ${gameState.players}`;
+      
+      document.getElementById('secret-word').textContent = 
+        isImpostor ? "??? (Eres el impostor)" : gameState.currentWord;
+      
+      document.getElementById('player-instructions').textContent = 
+        isImpostor ? "Debes adivinar la palabra secreta" : "Da pistas sobre esta palabra";
+      
+      document.getElementById('game-word').textContent = gameState.currentWord;
+      
+      showView(views.playerView);
+    }
 
     document.getElementById('continue-btn').addEventListener('click', () => {
       gameState.currentPlayer++;
       
       if (gameState.currentPlayer < gameState.players) {
-        // Mostrar pantalla de pasar celular
-        document.getElementById('player-counter').textContent = 
-          `Jugador ${gameState.currentPlayer + 1} de ${gameState.players}`;
-        showView(views.passScreen);
+        // Mostrar palabra al siguiente jugador
+        showPlayerView();
       } else {
         // Todos han visto la palabra, comenzar juego
         startTimer();
         showView(views.gameView);
       }
-    });
-
-    document.getElementById('pass-screen').addEventListener('click', () => {
-      // Mostrar palabra al siguiente jugador
-      showView(views.playerView);
     });
 
     document.getElementById('end-game-btn').addEventListener('click', () => {
