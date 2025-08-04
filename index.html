@@ -90,6 +90,15 @@
       display: none;
     }
 
+    .security-screen {
+      height: 100vh;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
     .timer {
       font-size: 3rem;
       text-align: center;
@@ -154,6 +163,9 @@
       </div>
     </div>
 
+    <!-- Security Screen (completamente en negro) -->
+    <div id="security-screen" class="hidden security-screen"></div>
+
     <!-- Game View -->
     <div id="game-view" class="hidden">
       <div class="card">
@@ -167,11 +179,18 @@
   </div>
 
   <script>
-    // Game Data
+    // Game Data - 10 categorías con 15+ palabras cada una
     const wordCategories = {
-      animals: ["Elefante", "Tigre", "Ballena", "Koala", "Jirafa", "Delfín", "Pingüino", "Leopardo", "Canguro", "Rinoceronte"],
-      cities: ["París", "Tokyo", "Nueva York", "Barcelona", "Londres", "Roma", "Sydney", "Bangkok", "México", "Berlín"],
-      foods: ["Pizza", "Sushi", "Tacos", "Hamburguesa", "Pasta", "Chocolate", "Helado", "Paella", "Curry", "Pancakes"]
+      animales: ["Elefante", "Tigre", "Ballena", "Koala", "Jirafa", "Delfín", "Pingüino", "Leopardo", "Canguro", "Rinoceronte", "Hipopótamo", "Cocodrilo", "Ornitorrinco", "Armadillo", "Panda", "Suricata", "Pulpo", "Camaleón"],
+      ciudades: ["París", "Tokyo", "Nueva York", "Barcelona", "Londres", "Roma", "Sydney", "Bangkok", "México", "Berlín", "Ámsterdam", "Dubái", "Estambul", "Toronto", "Seúl", "Singapur", "Lisboa", "Viena"],
+      comidas: ["Pizza", "Sushi", "Tacos", "Hamburguesa", "Pasta", "Chocolate", "Helado", "Paella", "Curry", "Pancakes", "Ensalada", "Empanadas", "Ramen", "Ceviche", "Tiramisú", "Arepa", "Falafel", "Hummus"],
+      películas: ["El Padrino", "Star Wars", "Titanic", "Avatar", "Jurassic Park", "Matrix", "Gladiador", "Forrest Gump", "Inception", "Pulp Fiction", "Frozen", "Shrek", "Toy Story", "Harry Potter", "El Señor de los Anillos"],
+      deportes: ["Fútbol", "Baloncesto", "Tenis", "Natación", "Golf", "Voleibol", "Atletismo", "Ciclismo", "Rugby", "Béisbol", "Boxeo", "Artes Marciales", "Esquí", "Surf", "Escalada", "Hockey", "Gimnasia"],
+      profesiones: ["Doctor", "Bombero", "Profesor", "Piloto", "Abogado", "Chef", "Arquitecto", "Astronauta", "Científico", "Policía", "Ingeniero", "Artista", "Músico", "Periodista", "Actor", "Agricultor", "Programador"],
+      países: ["Argentina", "Brasil", "Canadá", "España", "Francia", "Japón", "Australia", "Italia", "Alemania", "China", "Rusia", "India", "Sudáfrica", "Egipto", "México", "Colombia", "Noruega"],
+      tecnología: ["Smartphone", "Computadora", "Internet", "Robot", "Inteligencia Artificial", "Realidad Virtual", "Dron", "Blockchain", "Criptomoneda", "Impresora 3D", "Satélite", "Smartwatch", "Televisor", "Consola", "Redes Sociales"],
+      naturaleza: ["Volcán", "Cascada", "Bosque", "Desierto", "Océano", "Aurora Boreal", "Arrecife", "Glaciar", "Cañón", "Selva", "Montaña", "Lago", "Río", "Cueva", "Atolón", "Tundra", "Pantano"],
+      música: ["Guitarra", "Piano", "Batería", "Violín", "Saxofón", "Microfono", "Disco", "Concierto", "Ópera", "Rock", "Pop", "Jazz", "Sinfonía", "Hip Hop", "Reggaetón", "Folklore", "Electrónica"]
     };
 
     // Game State
@@ -180,8 +199,9 @@
       currentPlayer: 0,
       impostor: null,
       currentWord: '',
+      currentCategory: '',
       timer: null,
-      timeLeft: 30 * 60 // 30 minutos en segundos
+      timeLeft: 30 * 60
     };
 
     // DOM Elements
@@ -189,6 +209,7 @@
       mainMenu: document.getElementById('main-menu'),
       setupGame: document.getElementById('setup-game'),
       playerView: document.getElementById('player-view'),
+      securityScreen: document.getElementById('security-screen'),
       gameView: document.getElementById('game-view')
     };
 
@@ -198,10 +219,13 @@
       view.classList.remove('hidden');
     }
 
-    function getRandomWord() {
+    function getRandomCategory() {
       const categories = Object.keys(wordCategories);
-      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-      const words = wordCategories[randomCategory];
+      return categories[Math.floor(Math.random() * categories.length)];
+    }
+
+    function getRandomWord(category) {
+      const words = wordCategories[category];
       return words[Math.floor(Math.random() * words.length)];
     }
 
@@ -245,11 +269,13 @@
       }
       
       // Configurar nuevo juego
+      gameState.currentCategory = getRandomCategory();
       gameState = {
         players: numPlayers,
         currentPlayer: 0,
-        impostor: Math.floor(Math.random() * numPlayers), // Elegir impostor aleatorio
-        currentWord: getRandomWord(),
+        impostor: Math.floor(Math.random() * numPlayers),
+        currentWord: getRandomWord(gameState.currentCategory),
+        currentCategory: gameState.currentCategory,
         timer: null,
         timeLeft: 30 * 60
       };
@@ -265,10 +291,11 @@
         `Jugador ${gameState.currentPlayer + 1} de ${gameState.players}`;
       
       document.getElementById('secret-word').textContent = 
-        isImpostor ? "??? (Eres el impostor)" : gameState.currentWord;
+        isImpostor ? "???" : gameState.currentWord;
       
       document.getElementById('player-instructions').textContent = 
-        isImpostor ? "Debes adivinar la palabra secreta" : "Da pistas sobre esta palabra";
+        isImpostor ? "Eres el IMPOSTOR. Debes adivinar la palabra secreta." : 
+        `Categoría: ${gameState.currentCategory.toUpperCase()}. Da pistas sin decir la palabra.`;
       
       document.getElementById('game-word').textContent = gameState.currentWord;
       
@@ -276,13 +303,29 @@
     }
 
     document.getElementById('continue-btn').addEventListener('click', () => {
+      // Mostrar pantalla de seguridad (negra)
+      showView(views.securityScreen);
+      
+      // Después de 1 segundo, pasar al siguiente jugador o comenzar el juego
+      setTimeout(() => {
+        gameState.currentPlayer++;
+        
+        if (gameState.currentPlayer < gameState.players) {
+          showPlayerView();
+        } else {
+          startTimer();
+          showView(views.gameView);
+        }
+      }, 1000);
+    });
+
+    // Tocar la pantalla de seguridad para continuar (opcional)
+    document.getElementById('security-screen').addEventListener('click', () => {
       gameState.currentPlayer++;
       
       if (gameState.currentPlayer < gameState.players) {
-        // Mostrar palabra al siguiente jugador
         showPlayerView();
       } else {
-        // Todos han visto la palabra, comenzar juego
         startTimer();
         showView(views.gameView);
       }
