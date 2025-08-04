@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impostor - Juego de Mesa</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #34495e;
+      --accent: #e74c3c;
+      --text: #ecf0f1;
+      --bg: #1a1a1a;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+      touch-action: manipulation;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1, h2, h3 {
+      color: var(--text);
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      text-align: center;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
+
+    .card {
+      background-color: var(--primary);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      margin: 5px 0;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #c0392b;
+    }
+
+    button.secondary {
+      background-color: var(--secondary);
+    }
+
+    button.secondary:hover {
+      background-color: #2c3e50;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0 15px;
+      border-radius: 6px;
+      border: 1px solid var(--secondary);
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    .player-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .player-list li {
+      padding: 10px;
+      margin-bottom: 5px;
+      background-color: var(--secondary);
+      border-radius: 4px;
+    }
+
+    .impostor {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .word-display {
+      font-size: 2.5rem;
+      text-align: center;
+      margin: 30px 0;
+      font-weight: bold;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: auto;
+      padding: 10px;
+      border-radius: 50%;
+      background-color: var(--secondary);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background-color: var(--primary);
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .close-modal {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      width: auto;
+    }
+
+    .pass-screen {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      font-size: 2rem;
+    }
+
+    .pass-screen h2 {
+      font-size: 3rem;
+      margin-bottom: 30px;
+    }
+
+    .pass-screen p {
+      font-size: 1.2rem;
+      color: #95a5a6;
+    }
+
+    .player-turn-indicator {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Main Menu -->
+    <div id="main-menu">
+      <h1>IMPOSTOR</h1>
+      <div class="card">
+        <p>Un juego de deducción social donde debes encontrar al impostor entre tus amigos.</p>
+        <div style="margin-top: 20px;">
+          <button id="new-game-btn">Nueva Partida</button>
+          <button id="how-to-play-btn" class="secondary">Cómo Jugar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setup Game -->
+    <div id="setup-game" class="hidden">
+      <h1>Configurar Partida</h1>
+      <div class="card">
+        <div>
+          <label for="player-names">Nombres de jugadores (separados por comas):</label>
+          <input type="text" id="player-names" placeholder="Ej: Ana, Juan, María, Pedro">
+        </div>
+        <div>
+          <label for="rounds">Número de rondas:</label>
+          <input type="number" id="rounds" min="1" max="10" value="3">
+        </div>
+        <div>
+          <label for="category">Categoría de palabras:</label>
+          <select id="category">
+            <option value="animals">Animales</option>
+            <option value="cities">Ciudades</option>
+            <option value="jobs">Profesiones</option>
+            <option value="sports">Deportes</option>
+            <option value="foods">Comidas</option>
+            <option value="movies">Películas</option>
+          </select>
+        </div>
+        <button id="start-game-btn">Comenzar Partida</button>
+        <button id="back-to-menu" class="secondary">Volver al Menú</button>
+      </div>
+    </div>
+
+    <!-- Pass Device Screen -->
+    <div id="pass-screen" class="hidden pass-screen">
+      <h2>PASE EL CELULAR</h2>
+      <p>Al siguiente jugador</p>
+      <div class="player-turn-indicator hidden" id="next-player-name"></div>
+    </div>
+
+    <!-- Player View -->
+    <div id="player-view" class="hidden">
+      <div class="card">
+        <div id="player-instructions">
+          <h2 id="player-role">Tu rol: <span id="role-text">Normal</span></h2>
+          <div id="normal-instructions">
+            <p>Tu palabra secreta es:</p>
+            <div class="word-display" id="secret-word">PALABRA</div>
+            <p>Da pistas sobre esta palabra sin decirla directamente.</p>
+          </div>
+          <div id="impostor-instructions" class="hidden">
+            <p>Eres el <span class="impostor">IMPOSTOR</span>!</p>
+            <p>Los demás jugadores conocen una palabra secreta. Escucha sus pistas e intenta adivinar cuál es.</p>
+          </div>
+        </div>
+        <button id="continue-btn">Continuar</button>
+      </div>
+    </div>
+
+    <!-- Round Results -->
+    <div id="round-results" class="hidden">
+      <h1>Resultados Ronda <span id="round-number">1</span></h1>
+      <div class="card">
+        <h2>La palabra era: <span id="revealed-word" style="font-weight: bold;">PALABRA</span></h2>
+        <h3>Jugadores:</h3>
+        <ul class="player-list" id="roles-list">
+          <!-- Player roles will be listed here -->
+        </ul>
+        <button id="next-round-btn">Siguiente Ronda</button>
+        <button id="end-game-btn" class="secondary">Terminar Partida</button>
+      </div>
+    </div>
+
+    <!-- How to Play -->
+    <div id="how-to-play" class="hidden">
+      <h1>Cómo Jugar</h1>
+      <div class="card">
+        <h2>Instrucciones:</h2>
+        <ol>
+          <li>Escribe los nombres de todos los jugadores.</li>
+          <li>En cada ronda, un jugador será el Impostor (aleatorio).</li>
+          <li>Los jugadores normales ven una palabra secreta.</li>
+          <li>El impostor no ve la palabra.</li>
+          <li>Por turnos, cada jugador da una pista sobre la palabra (o intenta adivinar si es el impostor).</li>
+          <li>Al final de la ronda, votan quién creen que es el impostor.</li>
+          <li>Se revela quién era realmente el impostor.</li>
+          <li>El juego continúa hasta completar todas las rondas.</li>
+        </ol>
+        <button id="back-from-instructions" class="secondary">Volver al Menú</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Button -->
+  <button class="settings-btn" id="settings-btn">⚙️</button>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="close-modal" id="close-settings">&times;</button>
+      <h2>Configuración</h2>
+      <div>
+        <label>
+          <input type="checkbox" id="dark-mode" checked> Modo oscuro
+        </label>
+      </div>
+      <div style="margin-top: 20px;">
+        <button id="reset-game" class="secondary">Reiniciar Juego</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game Data
+    const wordCategories = {
+      animals: ["Elefante", "Tigre", "Ballena", "Koala", "Jirafa", "Delfín", "Pingüino", "Leopardo", "Canguro", "Rinoceronte"],
+      cities: ["París", "Tokyo", "Nueva York", "Barcelona", "Londres", "Roma", "Sydney", "Bangkok", "México", "Berlín"],
+      jobs: ["Doctor", "Bombero", "Profesor", "Piloto", "Abogado", "Chef", "Arquitecto", "Astronauta", "Científico", "Policía"],
+      sports: ["Fútbol", "Baloncesto", "Tenis", "Natación", "Golf", "Voleibol", "Atletismo", "Ciclismo", "Rugby", "Béisbol"],
+      foods: ["Pizza", "Sushi", "Tacos", "Hamburguesa", "Pasta", "Chocolate", "Helado", "Paella", "Curry", "Pancakes"],
+      movies: ["Titanic", "Star Wars", "Matrix", "Avatar", "Gladiador", "Interestelar", "El Padrino", "Jurassic Park", "Frozen", "Avengers"]
+    };
+
+    // Game State
+    let gameState = {
+      players: [],
+      currentRound: 1,
+      totalRounds: 3,
+      currentWord: '',
+      impostor: null,
+      category: 'animals',
+      currentPlayerIndex: 0
+    };
+
+    // DOM Elements
+    const views = {
+      mainMenu: document.getElementById('main-menu'),
+      setupGame: document.getElementById('setup-game'),
+      passScreen: document.getElementById('pass-screen'),
+      playerView: document.getElementById('player-view'),
+      roundResults: document.getElementById('round-results'),
+      howToPlay: document.getElementById('how-to-play')
+    };
+
+    // Helper Functions
+    function showView(view) {
+      Object.values(views).forEach(v => v.classList.add('hidden'));
+      view.classList.remove('hidden');
+    }
+
+    function getRandomWord(category) {
+      const words = wordCategories[category];
+      return words[Math.floor(Math.random() * words.length)];
+    }
+
+    function selectImpostor(numPlayers) {
+      return Math.floor(Math.random() * numPlayers);
+    }
+
+    function updateRolesList() {
+      const rolesList = document.getElementById('roles-list');
+      rolesList.innerHTML = '';
+      
+      gameState.players.forEach((player, index) => {
+        const li = document.createElement('li');
+        const isImpostor = index === gameState.impostor;
+        
+        li.innerHTML = `
+          ${player} - <span class="${isImpostor ? 'impostor' : ''}">
+            ${isImpostor ? 'IMPOSTOR' : 'Normal'}
+          </span>
+        `;
+        
+        rolesList.appendChild(li);
+      });
+    }
+
+    function showPlayerView(playerIndex) {
+      const isImpostor = playerIndex === gameState.impostor;
+      
+      // Update display
+      document.getElementById('role-text').textContent = isImpostor ? 'Impostor' : 'Normal';
+      document.getElementById('secret-word').textContent = isImpostor ? '???' : gameState.currentWord;
+      
+      // Show appropriate instructions
+      document.getElementById('impostor-instructions').classList.toggle('hidden', !isImpostor);
+      document.getElementById('normal-instructions').classList.toggle('hidden', isImpostor);
+      
+      showView(views.playerView);
+    }
+
+    function showPassScreen(nextPlayerIndex) {
+      const nextPlayerName = gameState.players[nextPlayerIndex];
+      const nextPlayerElement = document.getElementById('next-player-name');
+      
+      if (nextPlayerName) {
+        nextPlayerElement.textContent = `Siguiente: ${nextPlayerName}`;
+        nextPlayerElement.classList.remove('hidden');
+      } else {
+        nextPlayerElement.classList.add('hidden');
+      }
+      
+      showView(views.passScreen);
+    }
+
+    // Event Listeners
+    document.getElementById('new-game-btn').addEventListener('click', () => {
+      showView(views.setupGame);
+    });
+
+    document.getElementById('how-to-play-btn').addEventListener('click', () => {
+      showView(views.howToPlay);
+    });
+
+    document.getElementById('back-to-menu').addEventListener('click', () => {
+      showView(views.mainMenu);
+    });
+
+    document.getElementById('back-from-instructions').addEventListener('click', () => {
+      showView(views.mainMenu);
+    });
+
+    document.getElementById('start-game-btn').addEventListener('click', () => {
+      const playerNamesInput = document.getElementById('player-names').value.trim();
+      const rounds = parseInt(document.getElementById('rounds').value);
+      const category = document.getElementById('category').value;
+      
+      if (!playerNamesInput) {
+        alert('Por favor ingresa los nombres de los jugadores');
+        return;
+      }
+      
+      const players = playerNamesInput.split(',').map(name => name.trim()).filter(name => name);
+      
+      if (players.length < 3) {
+        alert('Se necesitan al menos 3 jugadores');
+        return;
+      }
+      
+      gameState = {
+        players: players,
+        currentRound: 1,
+        totalRounds: rounds,
+        currentWord: getRandomWord(category),
+        impostor: selectImpostor(players.length),
+        category: category,
+        currentPlayerIndex: 0
+      };
+      
+      // Update round display
+      document.getElementById('round-number').textContent = gameState.currentRound;
+      document.getElementById('revealed-word').textContent = gameState.currentWord;
+      
+      // Start with first player
+      showPlayerView(0);
+    });
+
+    document.getElementById('continue-btn').addEventListener('click', () => {
+      // Move to next player or end round
+      gameState.currentPlayerIndex++;
+      
+      if (gameState.currentPlayerIndex < gameState.players.length) {
+        // Show pass screen before next player's turn
+        showPassScreen(gameState.currentPlayerIndex);
+      } else {
+        // All players have seen their role, show results
+        updateRolesList();
+        showView(views.roundResults);
+      }
+    });
+
+    // Tap anywhere on pass screen to continue
+    document.getElementById('pass-screen').addEventListener('click', () => {
+      if (gameState.currentPlayerIndex < gameState.players.length) {
+        showPlayerView(gameState.currentPlayerIndex);
+      }
+    });
+
+    document.getElementById('next-round-btn').addEventListener('click', () => {
+      gameState.currentRound++;
+      
+      if (gameState.currentRound > gameState.totalRounds) {
+        showView(views.mainMenu);
+        return;
+      }
+      
+      // Setup new round
+      gameState.currentWord = getRandomWord(gameState.category);
+      gameState.impostor = selectImpostor(gameState.players.length);
+      gameState.currentPlayerIndex = 0;
+      
+      // Update display
+      document.getElementById('round-number').textContent = gameState.currentRound;
+      document.getElementById('revealed-word').textContent = gameState.currentWord;
+      
+      // Start with first player
+      showPlayerView(0);
+    });
+
+    document.getElementById('end-game-btn').addEventListener('click', () => {
+      showView(views.mainMenu);
+    });
+
+    // Settings
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      document.getElementById('settings-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('close-settings').addEventListener('click', () => {
+      document.getElementById('settings-modal').classList.add('hidden');
+    });
+
+    document.getElementById('reset-game').addEventListener('click', () => {
+      localStorage.clear();
+      location.reload();
+    });
+
+    document.getElementById('dark-mode').addEventListener('change', (e) => {
+      document.body.classList.toggle('light-mode', !e.target.checked);
+    });
+  </script>
+</body>
+</html>
