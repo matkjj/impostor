@@ -71,11 +71,19 @@
       background-color: #c0392b;
     }
 
+    button.secondary {
+      background-color: var(--secondary);
+    }
+
     .word-display {
       font-size: 2.5rem;
       text-align: center;
       margin: 30px 0;
       font-weight: bold;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .hidden {
@@ -90,7 +98,6 @@
       justify-content: center;
       text-align: center;
       padding: 20px;
-      font-size: 2rem;
     }
 
     .pass-screen h2 {
@@ -98,9 +105,29 @@
       margin-bottom: 30px;
     }
 
-    .impostor {
-      color: var(--accent);
-      font-weight: bold;
+    .timer {
+      font-size: 3rem;
+      text-align: center;
+      margin: 20px 0;
+      font-family: monospace;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 6px;
+      border: 1px solid var(--secondary);
+      background-color: var(--bg);
+      color: var(--text);
+      font-size: 1.2rem;
+      text-align: center;
+    }
+
+    .instructions {
+      margin: 20px 0;
+      text-align: center;
+      color: #95a5a6;
     }
   </style>
 </head>
@@ -111,7 +138,28 @@
       <h1>IMPOSTOR</h1>
       <div class="card">
         <p>Un juego de deducción social donde debes encontrar al impostor</p>
-        <button id="start-game-btn">Iniciar Juego</button>
+        <button id="setup-game-btn">Iniciar Juego</button>
+      </div>
+    </div>
+
+    <!-- Setup Game -->
+    <div id="setup-game" class="hidden">
+      <h1>Configurar Juego</h1>
+      <div class="card">
+        <label for="num-players">Número de jugadores:</label>
+        <input type="number" id="num-players" min="3" max="10" value="4">
+        <button id="start-game-btn">Comenzar</button>
+        <button id="back-to-menu" class="secondary">Volver</button>
+      </div>
+    </div>
+
+    <!-- Player View -->
+    <div id="player-view" class="hidden">
+      <div class="card">
+        <div class="instructions">Tu palabra es:</div>
+        <div class="word-display" id="secret-word">PALABRA</div>
+        <div class="instructions">Da pistas sobre esta palabra sin decirla directamente</div>
+        <button id="continue-btn">He visto mi palabra</button>
       </div>
     </div>
 
@@ -119,22 +167,17 @@
     <div id="pass-screen" class="hidden pass-screen">
       <h2>PASE EL CELULAR</h2>
       <p>Al siguiente jugador</p>
+      <div id="player-counter"></div>
     </div>
 
-    <!-- Player View -->
-    <div id="player-view" class="hidden">
+    <!-- Game View -->
+    <div id="game-view" class="hidden">
       <div class="card">
-        <h2 id="player-role">Tu rol: <span id="role-text">Normal</span></h2>
-        <div id="normal-instructions">
-          <p>Tu palabra secreta es:</p>
-          <div class="word-display" id="secret-word">PALABRA</div>
-          <p>Da pistas sobre esta palabra sin decirla directamente.</p>
-        </div>
-        <div id="impostor-instructions" class="hidden">
-          <p>Eres el <span class="impostor">IMPOSTOR</span>!</p>
-          <p>Los demás jugadores conocen una palabra secreta. Escucha sus pistas.</p>
-        </div>
-        <button id="continue-btn">Continuar</button>
+        <h1>¡A JUGAR!</h1>
+        <div class="word-display" id="game-word">PALABRA</div>
+        <div class="timer" id="timer">30:00</div>
+        <div class="instructions">Discutan y descubran quién es el impostor</div>
+        <button id="end-game-btn">Terminar Juego</button>
       </div>
     </div>
   </div>
@@ -144,83 +187,117 @@
     const wordCategories = {
       animals: ["Elefante", "Tigre", "Ballena", "Koala", "Jirafa", "Delfín", "Pingüino", "Leopardo", "Canguro", "Rinoceronte"],
       cities: ["París", "Tokyo", "Nueva York", "Barcelona", "Londres", "Roma", "Sydney", "Bangkok", "México", "Berlín"],
-      jobs: ["Doctor", "Bombero", "Profesor", "Piloto", "Abogado", "Chef", "Arquitecto", "Astronauta", "Científico", "Policía"],
-      sports: ["Fútbol", "Baloncesto", "Tenis", "Natación", "Golf", "Voleibol", "Atletismo", "Ciclismo", "Rugby", "Béisbol"],
       foods: ["Pizza", "Sushi", "Tacos", "Hamburguesa", "Pasta", "Chocolate", "Helado", "Paella", "Curry", "Pancakes"]
     };
 
     // Game State
     let gameState = {
-      players: ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4"],
-      currentPlayerIndex: 0,
+      players: 4,
+      currentPlayer: 0,
       currentWord: '',
-      impostor: null,
-      category: 'animals'
+      timer: null,
+      timeLeft: 30 * 60 // 30 minutos en segundos
     };
 
     // DOM Elements
-    const mainMenu = document.getElementById('main-menu');
-    const passScreen = document.getElementById('pass-screen');
-    const playerView = document.getElementById('player-view');
+    const views = {
+      mainMenu: document.getElementById('main-menu'),
+      setupGame: document.getElementById('setup-game'),
+      playerView: document.getElementById('player-view'),
+      passScreen: document.getElementById('pass-screen'),
+      gameView: document.getElementById('game-view')
+    };
 
     // Helper Functions
     function showView(view) {
-      mainMenu.classList.add('hidden');
-      passScreen.classList.add('hidden');
-      playerView.classList.add('hidden');
-      
+      Object.values(views).forEach(v => v.classList.add('hidden'));
       view.classList.remove('hidden');
     }
 
-    function getRandomWord(category) {
-      const words = wordCategories[category];
+    function getRandomWord() {
+      const categories = Object.keys(wordCategories);
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      const words = wordCategories[randomCategory];
       return words[Math.floor(Math.random() * words.length)];
     }
 
-    function selectImpostor(numPlayers) {
-      return Math.floor(Math.random() * numPlayers);
+    function startTimer() {
+      clearInterval(gameState.timer);
+      gameState.timeLeft = 30 * 60;
+      updateTimerDisplay();
+      
+      gameState.timer = setInterval(() => {
+        gameState.timeLeft--;
+        updateTimerDisplay();
+        
+        if (gameState.timeLeft <= 0) {
+          clearInterval(gameState.timer);
+          alert("¡Tiempo terminado!");
+        }
+      }, 1000);
     }
 
-    function startNewGame() {
-      gameState = {
-        players: ["Jugador 1", "Jugador 2", "Jugador 3", "Jugador 4"],
-        currentPlayerIndex: 0,
-        currentWord: getRandomWord('animals'),
-        impostor: selectImpostor(4),
-        category: 'animals'
-      };
-      
-      showPlayerView(0);
-    }
-
-    function showPlayerView(playerIndex) {
-      const isImpostor = playerIndex === gameState.impostor;
-      
-      document.getElementById('role-text').textContent = isImpostor ? 'Impostor' : 'Normal';
-      document.getElementById('secret-word').textContent = isImpostor ? '???' : gameState.currentWord;
-      
-      document.getElementById('impostor-instructions').classList.toggle('hidden', !isImpostor);
-      document.getElementById('normal-instructions').classList.toggle('hidden', isImpostor);
-      
-      showView(playerView);
+    function updateTimerDisplay() {
+      const minutes = Math.floor(gameState.timeLeft / 60);
+      const seconds = gameState.timeLeft % 60;
+      document.getElementById('timer').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     // Event Listeners
-    document.getElementById('start-game-btn').addEventListener('click', startNewGame);
+    document.getElementById('setup-game-btn').addEventListener('click', () => {
+      showView(views.setupGame);
+    });
+
+    document.getElementById('back-to-menu').addEventListener('click', () => {
+      showView(views.mainMenu);
+    });
+
+    document.getElementById('start-game-btn').addEventListener('click', () => {
+      const numPlayers = parseInt(document.getElementById('num-players').value);
+      if (numPlayers < 3 || numPlayers > 10) {
+        alert("El número de jugadores debe ser entre 3 y 10");
+        return;
+      }
+      
+      gameState = {
+        players: numPlayers,
+        currentPlayer: 0,
+        currentWord: getRandomWord(),
+        timer: null,
+        timeLeft: 30 * 60
+      };
+      
+      // Mostrar la palabra al primer jugador
+      document.getElementById('secret-word').textContent = gameState.currentWord;
+      document.getElementById('game-word').textContent = gameState.currentWord;
+      document.getElementById('player-counter').textContent = `Jugador 1 de ${gameState.players}`;
+      showView(views.playerView);
+    });
 
     document.getElementById('continue-btn').addEventListener('click', () => {
-      gameState.currentPlayerIndex++;
+      gameState.currentPlayer++;
       
-      if (gameState.currentPlayerIndex < gameState.players.length) {
-        showView(passScreen);
+      if (gameState.currentPlayer < gameState.players) {
+        // Mostrar pantalla de pasar celular
+        document.getElementById('player-counter').textContent = 
+          `Jugador ${gameState.currentPlayer + 1} de ${gameState.players}`;
+        showView(views.passScreen);
       } else {
-        // Todos vieron sus roles, volver al inicio
-        showView(mainMenu);
+        // Todos han visto la palabra, comenzar juego
+        startTimer();
+        showView(views.gameView);
       }
     });
 
     document.getElementById('pass-screen').addEventListener('click', () => {
-      showPlayerView(gameState.currentPlayerIndex);
+      // Mostrar palabra al siguiente jugador
+      showView(views.playerView);
+    });
+
+    document.getElementById('end-game-btn').addEventListener('click', () => {
+      clearInterval(gameState.timer);
+      showView(views.mainMenu);
     });
   </script>
 </body>
